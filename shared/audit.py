@@ -95,7 +95,7 @@ def load_audit_config():
 
 def audit_s3_buckets(findings, region):
     buckets_json = query_aws(region.account, "s3-list-buckets", region)
-    buckets = pyjq.all(".Buckets[].Name", buckets_json)
+    buckets = pyjq.all(".Buckets[]?.Name", buckets_json)
     for bucket in buckets:
         # Check policy
         try:
@@ -563,23 +563,27 @@ def audit_route53(findings, region):
             vpc_json,
         )
         for vpc in vpcs:
-            hosted_zone_file = f"account-data/{region.account.name}/{region.name}/route53-list-hosted-zones-by-vpc/{region_name}/{vpc}"
-            hosted_zones_json = json.load(open(hosted_zone_file))
-            hosted_zones = pyjq.all(".HostedZoneSummaries[]?", hosted_zones_json)
-            for hosted_zone in hosted_zones:
-                if hosted_zone.get("Owner", {}).get("OwningAccount", "") != "":
-                    if hosted_zone["Owner"]["OwningAccount"] != region.account.local_id:
-                        findings.add(
-                            Finding(
-                                region,
-                                "FOREIGN_HOSTED_ZONE",
-                                hosted_zone,
-                                resource_datails={
-                                    "vpc_id": vpc,
-                                    "vpc_regions": region_name,
-                                },
+            try:
+                hosted_zone_file = f"account-data/{region.account.name}/{region.name}/route53-list-hosted-zones-by-vpc/{region_name}/{vpc}"
+                hosted_zones_json = json.load(open(hosted_zone_file))
+                hosted_zones = pyjq.all(".HostedZoneSummaries[]?", hosted_zones_json)
+                for hosted_zone in hosted_zones:
+                    if hosted_zone.get("Owner", {}).get("OwningAccount", "") != "":
+                        if hosted_zone["Owner"]["OwningAccount"] != region.account.local_id:
+                            findings.add(
+                                Finding(
+                                    region,
+                                    "FOREIGN_HOSTED_ZONE",
+                                    hosted_zone,
+                                    resource_datails={
+                                        "vpc_id": vpc,
+                                        "vpc_regions": region_name,
+                                    },
+                                )
                             )
-                        )
+            except Exception as e:
+                print (f'Bypassing exception: {str(e)}')
+                print (f'hosted_zone_file: {hosted_zone_file}')
 
 
 def audit_ebs_snapshots(findings, region):

@@ -196,21 +196,26 @@ def find_admins_in_account(
 
         check_for_bad_policy(findings, region, policy["Arn"], policy_doc)
 
-        analyzed_policy = analyze_policy_string(json.dumps(policy_doc))
-        for f in analyzed_policy.findings:
-            findings.add(
-                Finding(
-                    region,
-                    "IAM_LINTER",
-                    policy["Arn"],
-                    resource_details={
-                        "issue": str(f.issue),
-                        "severity": str(f.severity),
-                        "location": str(f.location),
-                        "policy": policy_doc,
-                    },
+        try:
+            analyzed_policy = analyze_policy_string(json.dumps(policy_doc))
+            for f in analyzed_policy.findings:
+                findings.add(
+                    Finding(
+                        region,
+                        "IAM_LINTER",
+                        policy["Arn"],
+                        resource_details={
+                            "issue": str(f.issue),
+                            "severity": str(f.severity),
+                            "location": str(f.location),
+                            "policy": policy_doc,
+                        },
+                    )
                 )
-            )
+        except Exception as e:
+            print (f'Bypassing exception: {str(e)}')
+            print(f'json: {json.dumps(policy_doc)}')
+
 
         policy_action_counts[policy["Arn"]] = policy_action_count(policy_doc, location)
 

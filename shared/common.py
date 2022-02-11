@@ -296,7 +296,7 @@ def get_account_stats(account, all_resources=False):
             if resource["name"] == "S3 buckets":
                 if region.name == "us-east-1":
                     buckets = pyjq.all(
-                        ".Buckets[].Name",
+                        ".Buckets[]?.Name",
                         query_aws(region.account, "s3-list-buckets", region),
                     )
                     for bucket in buckets:
